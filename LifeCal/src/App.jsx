@@ -12,8 +12,39 @@ function App() {
   const [events, setEvents] = useState([])
   const [workMessages, setWorkMessages] = useState([{ role: 'assistant', content: "Hi! Upload a syllabus and I'll help you plan your schedule." }])
   const [funMessages, setFunMessages] = useState([{ role: 'assistant', content: "Hi! Tell me when you're free and I'll find something fun to do!" }])
+  const [calendarDate, setCalendarDate] = useState(new Date())
+  const [uploadStatus, setUploadStatus] = useState('idle') // idle | loading | done | error
 
 
+  const handleSyllabusUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    console.log('Uploading:', file.name) 
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await axios.post('http://localhost:8000/api/syllabus/parse', formData)
+      const { course_name, assignments } = res.data 
+      // Convert to FullCalendar event format
+      const newEvents = assignments.map((a, i) => ({
+        id: `syllabus-${i}`,
+        title: `${a.title}`,
+        date: a.due_date,
+        backgroundColor: '#6c8aff',
+        borderColor: '#6c8aff',
+      }))
+      setEvents(prev => [...prev, ...newEvents])
+      if (assignments.length > 0) {
+        setCalendarDate(new Date(assignments[0].due_date + 'T12:00:00'))
+      }
+        setUploadStatus('done')
+      console.log(`Parsed ${assignments.length} items from ${course_name}`)
+    } catch (err) {
+      console.error('Upload failed:', err)
+          setUploadStatus('error')
+
+    }
+  }
   useEffect(() => {
     axios.get('http://localhost:8000/')
       .then(() => setBackendOnline(true))
@@ -61,18 +92,21 @@ function App() {
             accept=".pdf"
             id="syllabus-input"
             style={{ display: 'none' }}
-            onChange={(e) => console.log('File selected:', e.target.files[0]?.name)}
+            onChange={handleSyllabusUpload}
             />
-    <label htmlFor="syllabus-input" className="upload-btn">
-      📄 Upload PDF
-    </label>
+            <label htmlFor="syllabus-input" className={`upload-btn ${uploadStatus === 'loading' ? 'uploading' : ''}`}>
+              {uploadStatus === 'idle' && '📄 Upload PDF'}
+              {uploadStatus === 'loading' && '⏳ Parsing...'}
+              {uploadStatus === 'done' && '✅ Uploaded!'}
+              {uploadStatus === 'error' && '❌ Try again'}
+              </label>
   </div>
 )}
       </aside>
 
       <main className="main">
         <div className="calendar-area">
-          <CalendarView events={events} mode={mode} />
+          <CalendarView events={events} mode={mode} calendarDate={calendarDate} />
         </div>
 
         <div className="chat-area">

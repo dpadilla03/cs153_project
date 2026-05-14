@@ -1,25 +1,38 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import axios from 'axios'
 
 function ChatBox({ mode, messages, setMessages }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
+
     const userMsg = { role: 'user', content: input }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
 
-    setTimeout(() => {
+    try {
+      const res = await axios.post('http://localhost:8000/api/chat/', {
+        messages: [...messages, userMsg],
+        mode
+      })
+      setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+    } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Backend not connected yet — coming soon!'
+        content: '⚠️ Could not reach backend. Is it running?'
       }])
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
-  // rest stays the same...
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -32,7 +45,7 @@ function ChatBox({ mode, messages, setMessages }) {
     <div className="chatbox">
       <div className="chat-messages">
         {messages.map((msg, i) => (
-            <div key={i} className={`message ${msg.role} ${msg.role === 'user' ? mode : ''}`}>
+          <div key={i} className={`message ${msg.role} ${msg.role === 'user' ? mode : ''}`}>
             <div className="bubble">{msg.content}</div>
           </div>
         ))}
@@ -41,6 +54,7 @@ function ChatBox({ mode, messages, setMessages }) {
             <div className="bubble typing">●●●</div>
           </div>
         )}
+        <div ref={bottomRef} />
       </div>
 
       <div className="chat-input-row">
@@ -57,7 +71,7 @@ function ChatBox({ mode, messages, setMessages }) {
           onClick={sendMessage}
           disabled={loading || !input.trim()}
         >
-          Send
+          {loading ? '...' : 'Send'}
         </button>
       </div>
     </div>
