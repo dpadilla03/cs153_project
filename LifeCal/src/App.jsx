@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './App.css'
 import CalendarView from './components/CalendarView'
+import ChatBox from './components/ChatBox'
+
 
 
 function App() {
   const [mode, setMode] = useState('work')
   const [backendOnline, setBackendOnline] = useState(false)
   const [events, setEvents] = useState([])
+  const [workMessages, setWorkMessages] = useState([{ role: 'assistant', content: "Hi! Upload a syllabus and I'll help you plan your schedule." }])
+  const [funMessages, setFunMessages] = useState([{ role: 'assistant', content: "Hi! Tell me when you're free and I'll find something fun to do!" }])
 
 
   useEffect(() => {
@@ -49,6 +53,21 @@ function App() {
         <p className="mode-label">
           {mode === 'work' ? 'Manage deadlines & study schedule' : 'Find something fun to do'}
         </p>
+        {mode === 'work' && (
+        <div className="upload-section">
+        <p className="section-label">Upload Syllabus</p>
+        <input
+            type="file"
+            accept=".pdf"
+            id="syllabus-input"
+            style={{ display: 'none' }}
+            onChange={(e) => console.log('File selected:', e.target.files[0]?.name)}
+            />
+    <label htmlFor="syllabus-input" className="upload-btn">
+      📄 Upload PDF
+    </label>
+  </div>
+)}
       </aside>
 
       <main className="main">
@@ -57,8 +76,11 @@ function App() {
         </div>
 
         <div className="chat-area">
-          {/* Chat goes here after */}
-          <p style={{ color: '#888' }}>Chat coming soon...</p>
+            <ChatBox 
+            mode={mode}
+            messages={mode === 'work' ? workMessages : funMessages}
+            setMessages={mode === 'work' ? setWorkMessages : setFunMessages}
+            />
         </div>
       </main>
     </div>
