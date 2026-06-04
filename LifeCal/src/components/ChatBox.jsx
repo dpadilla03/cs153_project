@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
+import API_BASE from '../utils/api'
 
 function ChatBox({ mode, messages, setMessages }) {
   const [input, setInput] = useState('')
