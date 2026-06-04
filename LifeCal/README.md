@@ -48,7 +48,7 @@ LifeCal/
 
 ### Work Mode
 
-Upload a syllabus PDF. The backend extracts the text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. These populate FullCalendar as blue (`#6c8aff`) events and the calendar auto-navigates to the first deadline.
+Upload a syllabus PDF. The backend extracts the text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. These populate FullCalendar as blue (`#6c8aff`) events and the calendar auto-navigates to the first deadline. If the syllabus omits the year, the current year is used as the default.
 
 Each syllabus event stores the full assignment metadata on the event object:
 
@@ -77,17 +77,23 @@ Clicking **Add** creates a FullCalendar event in coral (`#ff7a6c`) and navigates
 
 ---
 
-## Work Mode Chat — Calendar Editing
+## Calendar Editing via Chat
 
-After a syllabus is uploaded, the user can ask the work mode assistant to modify calendar events via natural language. Claude is given the full list of current events (with IDs) in its system prompt and has access to three tools:
+Both modes support natural language calendar editing. Claude is given the relevant events list (work events in Work Mode, fun events in Fun Mode) in its system prompt and has access to three tools:
 
-| Tool | What it does |
-|---|---|
-| `add_event(title, date)` | Adds a new blue event to the calendar |
-| `remove_event(id)` | Removes an event by its ID |
-| `reschedule_event(id, new_date)` | Moves an event to a new date |
+| Tool | Parameters | What it does |
+|---|---|---|
+| `add_event` | `title`, `date`, `time?` | Adds an event (blue in Work, coral in Fun) |
+| `remove_event` | `id` | Removes an event by its ID |
+| `reschedule_event` | `id`, `new_date`, `new_time?` | Moves an event to a new date and/or time |
 
-Example prompts: *"Move my midterm to the 20th"*, *"Remove the week 3 reading"*, *"Add a study session on Friday"*.
+`time` and `new_time` are optional (HH:MM 24-hour). When provided, FullCalendar renders the event as timed; when omitted, it's all-day.
+
+Each mode only sees its own events — Work Mode sees `syllabus-*` and `work-*` events; Fun Mode sees `fun-*` events — so Claude can't accidentally modify events from the other mode.
+
+Example prompts:
+- Work: *"Move my midterm to the 20th"*, *"Add a study session Friday at 2pm"*, *"Remove the week 3 reading"*
+- Fun: *"Move dinner to Saturday"*, *"Reschedule Taverna to 9:30pm"*, *"Remove the escape room"*
 
 Claude always includes a plain-text explanation alongside any tool call so the user knows what changed.
 
@@ -147,7 +153,7 @@ Both event types export with rich metadata:
 Body:    { messages, mode, preferences: {location, budget, activity_type}, events: [{id, title, date}] }
 Response: { reply: string, tool_calls: [{name, input}] }
 ```
-Work mode: injects the current events list into the system prompt and provides calendar tools to Claude. Fun mode: injects user preferences and instructs Claude to output a SEARCH keyword.
+Both modes inject the relevant events list and provide calendar tools to Claude. Work mode additionally instructs Claude to output a SEARCH keyword for place lookups. Each mode only receives its own events (filtered by ID prefix).
 
 ### `POST /api/syllabus/parse`
 ```
