@@ -11,10 +11,35 @@ router = APIRouter()
 
 FOURSQUARE_API_KEY = os.getenv("FOURSQUARE_API_KEY")
 
+# Foursquare category IDs — helps the API filter by type when text search is weak
+_CATEGORY_MAP = [
+    (["food", "eat", "restaurant", "breakfast", "brunch", "lunch", "dinner",
+      "pizza", "burger", "sushi", "tacos", "mexican", "italian", "thai",
+      "chinese", "japanese", "indian", "bistro", "bakery", "diner",
+      "cuisine", "place to eat", "somewhere to eat"], "13000"),
+    (["coffee", "cafe", "café", "tea", "espresso", "latte"], "13032"),
+    (["bar", "drinks", "cocktail", "beer", "wine", "pub", "nightlife"], "13003"),
+    (["escape", "escape room", "entertainment", "movie", "theater", "theatre",
+      "cinema", "museum", "art", "gallery", "bowling", "arcade", "comedy",
+      "concert", "show", "amusement", "zoo", "aquarium", "puzzle"], "10000"),
+    (["park", "hike", "hiking", "trail", "outdoor", "nature", "garden",
+      "beach", "lake", "camping", "picnic", "sports", "recreation"], "16000"),
+    (["shop", "shopping", "store", "mall", "market", "boutique",
+      "bookstore", "vintage", "thrift", "antique"], "17000"),
+]
+
+def _infer_category(query: str) -> str | None:
+    q = query.lower()
+    for keywords, cat_id in _CATEGORY_MAP:
+        if any(kw in q for kw in keywords):
+            return cat_id
+    return None
+
 class PlacesRequest(BaseModel):
-    query: str                          # e.g. "coffee shops", "hiking", "restaurants"
-    location: str                       # e.g. "Palo Alto, CA"
-    budget: Optional[str] = "$$"       # $, $$, $$$, $$$$
+    query: str
+    location: str
+    budget: Optional[str] = "$$"
+    activity_type: Optional[str] = None
     limit: int = 5
 
 class Place(BaseModel):
@@ -48,6 +73,14 @@ async def search_places(request: PlacesRequest):
         "near": request.location,
         "limit": request.limit,
     }
+
+    category = _infer_category(request.query) or _infer_category(request.activity_type or "")
+    if category:
+        params["categories"] = category
+
+    price_map = {"$": "1", "$$": "2", "$$$": "3", "$$$$": "4"}
+    if request.budget in price_map:
+        params["price"] = price_map[request.budget]
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         res = await client.get(

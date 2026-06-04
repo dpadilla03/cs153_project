@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import API_BASE from '../utils/api'
 
-// test
-function ChatBox({ mode, messages, setMessages, preferences }) {
+function ChatBox({ mode, messages, setMessages, preferences, onAddToCalendar }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cardDates, setCardDates] = useState({})
+  const [cardTimes, setCardTimes] = useState({})
   const bottomRef = useRef(null)
+  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -22,7 +24,7 @@ function ChatBox({ mode, messages, setMessages, preferences }) {
 
     try {
       const res = await axios.post(`${API_BASE}/api/chat/`, {
-        messages: [...messages, userMsg],
+        messages: [...messages, userMsg].filter(m => !m.type),
         mode,
         preferences
       })
@@ -30,7 +32,7 @@ function ChatBox({ mode, messages, setMessages, preferences }) {
       const reply = res.data.reply
 
       if (mode === 'fun' && reply.includes('SEARCH:')) {
-        const searchQuery = reply.split('SEARCH:')[1].trim()
+        const searchQuery = reply.split('SEARCH:')[1].split('\n')[0].trim()
         const cleanReply = reply.split('SEARCH:')[0].trim()
 
         setMessages(prev => [...prev, { role: 'assistant', content: cleanReply }])
@@ -40,15 +42,14 @@ function ChatBox({ mode, messages, setMessages, preferences }) {
             query: searchQuery,
             location: preferences.location,
             budget: preferences.budget,
+            activity_type: preferences.activity_type,
             limit: 3
           })
           if (placesRes.data.places.length > 0) {
-            const placesList = placesRes.data.places
-              .map(p => `📍 **${p.name}** (${p.category}) — ${p.address} ${p.distance}`)
-              .join('\n')
             setMessages(prev => [...prev, {
               role: 'assistant',
-              content: `Here are some options near you:\n${placesList}`
+              type: 'places',
+              places: placesRes.data.places,
             }])
           }
         }
@@ -75,11 +76,54 @@ function ChatBox({ mode, messages, setMessages, preferences }) {
   return (
     <div className="chatbox">
       <div className="chat-messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role} ${msg.role === 'user' ? mode : ''}`}>
-            <div className="bubble">{msg.content}</div>
-          </div>
-        ))}
+        {messages.map((msg, i) => {
+          if (msg.type === 'places') {
+            return (
+              <div key={i} className="message assistant">
+                <div className="place-cards">
+                  <p className="places-header">Here are some options near you:</p>
+                  {msg.places.map((place, j) => {
+                    const key = `${i}-${j}`
+                    const date = cardDates[key] || today
+                    return (
+                      <div key={j} className="place-card">
+                        <div className="place-card-name">{place.name}</div>
+                        <div className="place-card-meta">{place.category} · {place.address}</div>
+                        {place.distance && <div className="place-card-distance">{place.distance}</div>}
+                        <div className="place-card-footer">
+                          <input
+                            type="date"
+                            className="place-date-input"
+                            value={date}
+                            onChange={e => setCardDates(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <input
+                            type="time"
+                            className="place-time-input"
+                            value={cardTimes[key] || ''}
+                            placeholder="time"
+                            onChange={e => setCardTimes(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <button
+                            className="place-add-btn"
+                            onClick={() => onAddToCalendar?.(place, date, cardTimes[key] || null)}
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          }
+          return (
+            <div key={i} className={`message ${msg.role} ${msg.role === 'user' ? mode : ''}`}>
+              <div className="bubble">{msg.content}</div>
+            </div>
+          )
+        })}
         {loading && (
           <div className="message assistant">
             <div className="bubble typing">●●●</div>

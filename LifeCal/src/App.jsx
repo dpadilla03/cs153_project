@@ -18,8 +18,26 @@ function App() {
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [uploadStatus, setUploadStatus] = useState('idle') // idle | loading | done | error
   const [preferences, setPreferences] = useState({
-  location: 'Palo Alto, CA',
-  budget: '$$',})
+    location: 'Palo Alto, CA',
+    budget: '$$',
+    activity_type: 'restaurants',
+  })
+
+  const handleAddToCalendar = (place, date, time) => {
+    const event = {
+      id: `fun-${Math.random().toString(36).slice(2)}`,
+      title: place.name,
+      backgroundColor: '#ff7a6c',
+      borderColor: '#ff7a6c',
+    }
+    if (time) {
+      event.start = `${date}T${time}`
+    } else {
+      event.date = date
+    }
+    setEvents(prev => [...prev, event])
+    setCalendarDate(new Date(`${date}T12:00:00`))
+  }
 
 
   const handleSyllabusUpload = async (e) => {
@@ -111,6 +129,20 @@ function App() {
         {['$', '$$', '$$$', '$$$$'].map(b => <option key={b}>{b}</option>)}
       </select>
     </div>
+    <div className="pref-field">
+      <label className="pref-label">Looking for</label>
+      <select
+        className="pref-input"
+        value={preferences.activity_type}
+        onChange={e => setPreferences(p => ({ ...p, activity_type: e.target.value }))}
+      >
+        <option value="restaurants">Food & Drink</option>
+        <option value="parks outdoors">Outdoors</option>
+        <option value="entertainment">Entertainment</option>
+        <option value="coffee shops">Coffee</option>
+        <option value="shopping">Shopping</option>
+      </select>
+    </div>
   </div>
 )}
         {mode === 'work' && (
@@ -145,6 +177,7 @@ function App() {
   setMessages={mode === 'work' ? setWorkMessages : setFunMessages}
   preferences={preferences}
   apiBase={API_BASE}
+  onAddToCalendar={handleAddToCalendar}
 />
         </div>
       </main>
