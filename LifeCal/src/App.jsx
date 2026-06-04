@@ -23,6 +23,28 @@ function App() {
     activity_type: 'restaurants',
   })
 
+  const handleCalendarAction = (toolCalls) => {
+    toolCalls.forEach(tc => {
+      if (tc.name === 'add_event') {
+        setEvents(prev => [...prev, {
+          id: `work-${Math.random().toString(36).slice(2)}`,
+          title: tc.input.title,
+          date: tc.input.date,
+          backgroundColor: '#6c8aff',
+          borderColor: '#6c8aff',
+        }])
+      } else if (tc.name === 'remove_event') {
+        setEvents(prev => prev.filter(e => e.id !== tc.input.id))
+      } else if (tc.name === 'reschedule_event') {
+        setEvents(prev => prev.map(e =>
+          e.id === tc.input.id
+            ? { ...e, date: tc.input.new_date, start: undefined }
+            : e
+        ))
+      }
+    })
+  }
+
   const handleExportIcs = async () => {
     if (events.length === 0) return
     const res = await axios.post(`${API_BASE}/api/calendar/export`, events, {
@@ -69,10 +91,14 @@ function App() {
       // Convert to FullCalendar event format
       const newEvents = assignments.map((a, i) => ({
         id: `syllabus-${i}`,
-        title: `${a.title}`,
+        title: a.title,
         date: a.due_date,
         backgroundColor: '#6c8aff',
         borderColor: '#6c8aff',
+        courseName: course_name,
+        assignmentType: a.type,
+        estimatedHours: a.estimated_hours,
+        assignmentDescription: a.description || '',
       }))
       setEvents(prev => [...prev, ...newEvents])
       if (assignments.length > 0) {
@@ -200,6 +226,8 @@ function App() {
   preferences={preferences}
   apiBase={API_BASE}
   onAddToCalendar={handleAddToCalendar}
+  events={events}
+  onCalendarAction={handleCalendarAction}
 />
         </div>
       </main>

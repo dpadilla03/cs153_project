@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import API_BASE from '../utils/api'
 
-function ChatBox({ mode, messages, setMessages, preferences, onAddToCalendar }) {
+function ChatBox({ mode, messages, setMessages, preferences, onAddToCalendar, events, onCalendarAction }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [cardDates, setCardDates] = useState({})
@@ -26,10 +26,18 @@ function ChatBox({ mode, messages, setMessages, preferences, onAddToCalendar }) 
       const res = await axios.post(`${API_BASE}/api/chat/`, {
         messages: [...messages, userMsg].filter(m => !m.type),
         mode,
-        preferences
+        preferences,
+        events: mode === 'work'
+          ? events.map(e => ({ id: e.id, title: e.title, date: e.date, start: e.start }))
+          : [],
       })
 
       const reply = res.data.reply
+      const toolCalls = res.data.tool_calls || []
+
+      if (toolCalls.length > 0) {
+        onCalendarAction?.(toolCalls)
+      }
 
       if (mode === 'fun' && reply.includes('SEARCH:')) {
         const searchQuery = reply.split('SEARCH:')[1].split('\n')[0].trim()

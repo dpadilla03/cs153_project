@@ -12,10 +12,16 @@ class CalendarEvent(BaseModel):
     title: str
     date: Optional[str] = None
     start: Optional[str] = None
+    # fun mode place metadata
     placeAddress: Optional[str] = None
     placeCategory: Optional[str] = None
     placeDistance: Optional[str] = None
     placeUrl: Optional[str] = None
+    # work mode syllabus metadata
+    courseName: Optional[str] = None
+    assignmentType: Optional[str] = None
+    estimatedHours: Optional[int] = None
+    assignmentDescription: Optional[str] = None
 
 def _esc(text: str) -> str:
     """Escape special characters per RFC 5545."""
@@ -62,6 +68,20 @@ async def export_calendar(events: List[CalendarEvent]):
             vevent.append(f"DESCRIPTION:{_esc(' · '.join(parts))}")
         if event.placeUrl:
             vevent.append(f"URL:{event.placeUrl}")
+        if event.assignmentType or event.courseName or event.assignmentDescription:
+            desc_parts = []
+            if event.courseName:
+                desc_parts.append(event.courseName)
+            if event.assignmentType:
+                type_label = event.assignmentType.capitalize()
+                if event.estimatedHours:
+                    type_label += f" (est. {event.estimatedHours} hrs)"
+                desc_parts.append(type_label)
+            if event.assignmentDescription:
+                desc_parts.append(event.assignmentDescription)
+            vevent.append(f"DESCRIPTION:{_esc(' — '.join(desc_parts))}")
+        if event.assignmentType:
+            vevent.append(f"CATEGORIES:{_esc(event.assignmentType.upper())}")
         vevent.append("END:VEVENT")
         lines += vevent
 
