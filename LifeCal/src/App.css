@@ -319,3 +319,126 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.pref-field {
+  margin-bottom: 10px;
+}
+
+.pref-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.pref-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.pref-input:focus {
+  border-color: var(--accent-fun);
+}
+
+.place-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.places-header {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.place-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.place-card-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.place-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.place-card-distance {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.place-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.place-date-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.place-date-input:focus {
+  border-color: var(--accent-fun);
+}
+
+.place-time-input {
+  width: 90px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.place-time-input:focus {
+  border-color: var(--accent-fun);
+}
+
+.place-add-btn {
+  padding: 4px 12px;
+  background: var(--accent-fun-dim);
+  border: 1px solid var(--accent-fun);
+  border-radius: 6px;
+  color: var(--accent-fun);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.place-add-btn:hover {
+  opacity: 0.8;
+}
