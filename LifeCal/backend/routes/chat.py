@@ -28,6 +28,7 @@ CALENDAR_TOOLS = [
             "properties": {
                 "title": {"type": "string", "description": "Event title"},
                 "date":  {"type": "string", "description": "Date in YYYY-MM-DD format"},
+                "time":  {"type": "string", "description": "Optional start time in HH:MM 24-hour format. Omit for all-day."},
             },
             "required": ["title", "date"],
         },
@@ -45,12 +46,13 @@ CALENDAR_TOOLS = [
     },
     {
         "name": "reschedule_event",
-        "description": "Move a calendar event to a new date.",
+        "description": "Move a calendar event to a new date and/or time.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "id":       {"type": "string", "description": "The event ID to reschedule"},
                 "new_date": {"type": "string", "description": "New date in YYYY-MM-DD format"},
+                "new_time": {"type": "string", "description": "Optional new time in HH:MM 24-hour format. Omit to keep as all-day or preserve existing time."},
             },
             "required": ["id", "new_date"],
         },
@@ -60,6 +62,8 @@ CALENDAR_TOOLS = [
 FUN_PROMPT_BASE = """You are LifeCal's fun assistant. You help users make the most of their free time.
 
 {preferences_context}
+
+{events_context}
 
 When a user asks for activity or food recommendations, end your message with exactly this tag on a new line:
 SEARCH: <category keyword>
@@ -80,7 +84,10 @@ Examples:
 - User wants to go hiking → SEARCH: outdoor
 
 Only include SEARCH when they're explicitly asking for a place recommendation.
-For general conversation, do NOT include the SEARCH tag."""
+For general conversation, do NOT include the SEARCH tag.
+
+You also have tools to manage the user's fun calendar events: add_event, remove_event, reschedule_event.
+Use them when the user asks to add, remove, or move existing fun events. Always include a short plain-text explanation alongside any tool call."""
 
 class Message(BaseModel):
     role: str
@@ -129,7 +136,18 @@ async def chat(request: ChatRequest):
             f"User preferences: location={prefs.location}, "
             f"budget={prefs.budget}, interests={prefs.activity_type}"
         )
-        system = FUN_PROMPT_BASE.format(preferences_context=preferences_context)
+        if request.events:
+            events_list = "\n".join(
+                f"- [{e.id}] {e.title} on {e.date or e.start}"
+                for e in request.events
+            )
+            events_context = f"Fun events already on the calendar:\n{events_list}"
+        else:
+            events_context = "No fun events on the calendar yet."
+        system = FUN_PROMPT_BASE.format(
+            preferences_context=preferences_context,
+            events_context=events_context,
+        )
 
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
 
@@ -138,9 +156,8 @@ async def chat(request: ChatRequest):
         max_tokens=1024,
         system=system,
         messages=messages,
+        tools=CALENDAR_TOOLS,
     )
-    if request.mode == "work":
-        kwargs["tools"] = CALENDAR_TOOLS
 
     response = client.messages.create(**kwargs)
 

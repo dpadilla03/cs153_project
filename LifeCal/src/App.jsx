@@ -23,24 +23,37 @@ function App() {
     activity_type: 'restaurants',
   })
 
-  const handleCalendarAction = (toolCalls) => {
+  const handleCalendarAction = (toolCalls, mode) => {
+    const isFun = mode === 'fun'
     toolCalls.forEach(tc => {
       if (tc.name === 'add_event') {
-        setEvents(prev => [...prev, {
-          id: `work-${Math.random().toString(36).slice(2)}`,
+        const newEvent = {
+          id: `${isFun ? 'fun' : 'work'}-${Math.random().toString(36).slice(2)}`,
           title: tc.input.title,
-          date: tc.input.date,
-          backgroundColor: '#6c8aff',
-          borderColor: '#6c8aff',
-        }])
+          backgroundColor: isFun ? '#ff7a6c' : '#6c8aff',
+          borderColor: isFun ? '#ff7a6c' : '#6c8aff',
+        }
+        if (tc.input.time) {
+          newEvent.start = `${tc.input.date}T${tc.input.time}`
+        } else {
+          newEvent.date = tc.input.date
+        }
+        setEvents(prev => [...prev, newEvent])
       } else if (tc.name === 'remove_event') {
         setEvents(prev => prev.filter(e => e.id !== tc.input.id))
       } else if (tc.name === 'reschedule_event') {
-        setEvents(prev => prev.map(e =>
-          e.id === tc.input.id
-            ? { ...e, date: tc.input.new_date, start: undefined }
-            : e
-        ))
+        setEvents(prev => prev.map(e => {
+          if (e.id !== tc.input.id) return e
+          const updated = { ...e }
+          if (tc.input.new_time) {
+            updated.start = `${tc.input.new_date}T${tc.input.new_time}`
+            delete updated.date
+          } else {
+            updated.date = tc.input.new_date
+            delete updated.start
+          }
+          return updated
+        }))
       }
     })
   }

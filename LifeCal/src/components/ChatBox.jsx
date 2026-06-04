@@ -27,16 +27,18 @@ function ChatBox({ mode, messages, setMessages, preferences, onAddToCalendar, ev
         messages: [...messages, userMsg].filter(m => !m.type),
         mode,
         preferences,
-        events: mode === 'work'
-          ? events.map(e => ({ id: e.id, title: e.title, date: e.date, start: e.start }))
-          : [],
+        events: events
+          .filter(e => mode === 'work'
+            ? e.id?.startsWith('syllabus-') || e.id?.startsWith('work-')
+            : e.id?.startsWith('fun-'))
+          .map(e => ({ id: e.id, title: e.title, date: e.date, start: e.start })),
       })
 
       const reply = res.data.reply
       const toolCalls = res.data.tool_calls || []
 
       if (toolCalls.length > 0) {
-        onCalendarAction?.(toolCalls)
+        onCalendarAction?.(toolCalls, mode)
       }
 
       if (mode === 'fun' && reply.includes('SEARCH:')) {
