@@ -159,14 +159,31 @@ npm run dev                   # runs on localhost:5173
 ```bash
 cd LifeCal/backend
 python -m venv venv && source venv/bin/activate
-pip install fastapi uvicorn pdfplumber anthropic httpx python-dotenv python-multipart
+
+# Generate requirements.txt if it doesn't exist yet
+pip freeze > requirements.txt
+
+pip install -r requirements.txt
 cp .env.example .env          # set ANTHROPIC_API_KEY and FOURSQUARE_API_KEY
 uvicorn main:app --reload     # runs on localhost:8000
 ```
 
+> **Note:** If you add new Python dependencies, regenerate `requirements.txt` before pushing:
+> ```bash
+> cd LifeCal/backend
+> source venv/bin/activate
+> pip freeze > requirements.txt
+> ```
+
 ---
 
 ## Deployment
+
+### Live URLs
+- **Frontend:** https://cs153-project.pages.dev
+- **Backend API:** https://api.lifecal.cc
+
+### Deploy commands
 
 | Step | Command |
 |---|---|
@@ -174,3 +191,11 @@ uvicorn main:app --reload     # runs on localhost:8000
 | Deploy backend | SSH into droplet → `git pull` → `pm2 restart lifecal-backend` |
 | Frontend env vars | Set in Cloudflare Pages dashboard |
 | Backend env vars | Edit `backend/.env` on the droplet |
+
+### SSH into the droplet
+```bash
+ssh root@167.99.172.146
+cd ~/cs153_project
+git pull
+pm2 restart lifecal-backend
+```

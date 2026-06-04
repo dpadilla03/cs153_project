@@ -6,6 +6,7 @@ import anthropic
 import os
 import json
 import io
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -70,7 +71,7 @@ Return ONLY valid JSON, no other text, in exactly this format:
 }}
 
 Rules:
-- If no year is specified assume 2025
+- If no year is specified assume {datetime.now().year}
 - Only include items with clear due dates
 - estimated_hours: exam=5, project=10, assignment=2, reading=1
 - type must be one of: assignment, exam, reading, project

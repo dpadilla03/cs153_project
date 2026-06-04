@@ -23,6 +23,41 @@ function App() {
     activity_type: 'restaurants',
   })
 
+  const handleCalendarAction = (toolCalls, mode) => {
+    const isFun = mode === 'fun'
+    toolCalls.forEach(tc => {
+      if (tc.name === 'add_event') {
+        const newEvent = {
+          id: `${isFun ? 'fun' : 'work'}-${Math.random().toString(36).slice(2)}`,
+          title: tc.input.title,
+          backgroundColor: isFun ? '#ff7a6c' : '#6c8aff',
+          borderColor: isFun ? '#ff7a6c' : '#6c8aff',
+        }
+        if (tc.input.time) {
+          newEvent.start = `${tc.input.date}T${tc.input.time}`
+        } else {
+          newEvent.date = tc.input.date
+        }
+        setEvents(prev => [...prev, newEvent])
+      } else if (tc.name === 'remove_event') {
+        setEvents(prev => prev.filter(e => e.id !== tc.input.id))
+      } else if (tc.name === 'reschedule_event') {
+        setEvents(prev => prev.map(e => {
+          if (e.id !== tc.input.id) return e
+          const updated = { ...e }
+          if (tc.input.new_time) {
+            updated.start = `${tc.input.new_date}T${tc.input.new_time}`
+            delete updated.date
+          } else {
+            updated.date = tc.input.new_date
+            delete updated.start
+          }
+          return updated
+        }))
+      }
+    })
+  }
+
   const handleExportIcs = async () => {
     if (events.length === 0) return
     const res = await axios.post(`${API_BASE}/api/calendar/export`, events, {
@@ -69,10 +104,14 @@ function App() {
       // Convert to FullCalendar event format
       const newEvents = assignments.map((a, i) => ({
         id: `syllabus-${i}`,
-        title: `${a.title}`,
+        title: a.title,
         date: a.due_date,
         backgroundColor: '#6c8aff',
         borderColor: '#6c8aff',
+        courseName: course_name,
+        assignmentType: a.type,
+        estimatedHours: a.estimated_hours,
+        assignmentDescription: a.description || '',
       }))
       setEvents(prev => [...prev, ...newEvents])
       if (assignments.length > 0) {
@@ -200,6 +239,8 @@ function App() {
   preferences={preferences}
   apiBase={API_BASE}
   onAddToCalendar={handleAddToCalendar}
+  events={events}
+  onCalendarAction={handleCalendarAction}
 />
         </div>
       </main>
