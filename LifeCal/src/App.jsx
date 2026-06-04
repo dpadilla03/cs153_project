@@ -4,6 +4,8 @@ import './App.css'
 import CalendarView from './components/CalendarView'
 import ChatBox from './components/ChatBox'
 import API_BASE from './utils/api'
+console.log('API_BASE is:', import.meta.env.VITE_API_URL)
+
 
 
 
@@ -15,6 +17,27 @@ function App() {
   const [funMessages, setFunMessages] = useState([{ role: 'assistant', content: "Hi! Tell me when you're free and I'll find something fun to do!" }])
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [uploadStatus, setUploadStatus] = useState('idle') // idle | loading | done | error
+  const [preferences, setPreferences] = useState({
+    location: 'Palo Alto, CA',
+    budget: '$$',
+    activity_type: 'restaurants',
+  })
+
+  const handleAddToCalendar = (place, date, time) => {
+    const event = {
+      id: `fun-${Math.random().toString(36).slice(2)}`,
+      title: place.name,
+      backgroundColor: '#ff7a6c',
+      borderColor: '#ff7a6c',
+    }
+    if (time) {
+      event.start = `${date}T${time}`
+    } else {
+      event.date = date
+    }
+    setEvents(prev => [...prev, event])
+    setCalendarDate(new Date(`${date}T12:00:00`))
+  }
 
 
   const handleSyllabusUpload = async (e) => {
@@ -85,6 +108,43 @@ function App() {
         <p className="mode-label">
           {mode === 'work' ? 'Manage deadlines & study schedule' : 'Find something fun to do'}
         </p>
+        {mode === 'fun' && (
+  <div className="upload-section">
+    <p className="section-label">Your Preferences</p>
+    <div className="pref-field">
+      <label className="pref-label">Location</label>
+      <input
+        className="pref-input"
+        value={preferences.location}
+        onChange={e => setPreferences(p => ({ ...p, location: e.target.value }))}
+      />
+    </div>
+    <div className="pref-field">
+      <label className="pref-label">Budget</label>
+      <select
+        className="pref-input"
+        value={preferences.budget}
+        onChange={e => setPreferences(p => ({ ...p, budget: e.target.value }))}
+      >
+        {['$', '$$', '$$$', '$$$$'].map(b => <option key={b}>{b}</option>)}
+      </select>
+    </div>
+    <div className="pref-field">
+      <label className="pref-label">Looking for</label>
+      <select
+        className="pref-input"
+        value={preferences.activity_type}
+        onChange={e => setPreferences(p => ({ ...p, activity_type: e.target.value }))}
+      >
+        <option value="restaurants">Food & Drink</option>
+        <option value="parks outdoors">Outdoors</option>
+        <option value="entertainment">Entertainment</option>
+        <option value="coffee shops">Coffee</option>
+        <option value="shopping">Shopping</option>
+      </select>
+    </div>
+  </div>
+)}
         {mode === 'work' && (
         <div className="upload-section">
         <p className="section-label">Upload Syllabus</p>
@@ -111,11 +171,14 @@ function App() {
         </div>
 
         <div className="chat-area">
-            <ChatBox 
-            mode={mode}
-            messages={mode === 'work' ? workMessages : funMessages}
-            setMessages={mode === 'work' ? setWorkMessages : setFunMessages}
-            />
+            <ChatBox
+  mode={mode}
+  messages={mode === 'work' ? workMessages : funMessages}
+  setMessages={mode === 'work' ? setWorkMessages : setFunMessages}
+  preferences={preferences}
+  apiBase={API_BASE}
+  onAddToCalendar={handleAddToCalendar}
+/>
         </div>
       </main>
     </div>
