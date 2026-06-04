@@ -442,3 +442,23 @@ body {
 .place-add-btn:hover {
   opacity: 0.8;
 }
+
+.export-btn {
+  margin-top: auto;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.export-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}

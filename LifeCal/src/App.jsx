@@ -23,12 +23,29 @@ function App() {
     activity_type: 'restaurants',
   })
 
+  const handleExportIcs = async () => {
+    if (events.length === 0) return
+    const res = await axios.post(`${API_BASE}/api/calendar/export`, events, {
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'lifecal.ics'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleAddToCalendar = (place, date, time) => {
     const event = {
       id: `fun-${Math.random().toString(36).slice(2)}`,
       title: place.name,
       backgroundColor: '#ff7a6c',
       borderColor: '#ff7a6c',
+      placeAddress: place.address || '',
+      placeCategory: place.category || '',
+      placeDistance: place.distance || '',
+      placeUrl: place.url || '',
     }
     if (time) {
       event.start = `${date}T${time}`
@@ -163,6 +180,11 @@ function App() {
               </label>
   </div>
 )}
+        {events.length > 0 && (
+          <button className="export-btn" onClick={handleExportIcs}>
+            ↓ Export .ics
+          </button>
+        )}
       </aside>
 
       <main className="main">
