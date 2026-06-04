@@ -3,6 +3,7 @@ import axios from 'axios'
 import './App.css'
 import CalendarView from './components/CalendarView'
 import ChatBox from './components/ChatBox'
+import API_BASE from './utils/api'
 
 
 
@@ -23,7 +24,7 @@ function App() {
     const formData = new FormData()
     formData.append('file', file)
     try {
-      const res = await axios.post('http://localhost:8000/api/syllabus/parse', formData)
+      const res = await axios.post(`${API_BASE}/api/syllabus/parse`, formData)
       const { course_name, assignments } = res.data 
       // Convert to FullCalendar event format
       const newEvents = assignments.map((a, i) => ({
@@ -46,7 +47,7 @@ function App() {
     }
   }
   useEffect(() => {
-    axios.get('http://localhost:8000/')
+    axios.get(`${API_BASE}/`)
       .then(() => setBackendOnline(true))
       .catch(() => setBackendOnline(false))
   }, [])
