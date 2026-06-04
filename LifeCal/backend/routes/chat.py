@@ -16,9 +16,15 @@ Be concise, practical, and encouraging. If the user mentions assignments or exam
 help them think through a realistic plan to complete them."""
 
 FUN_PROMPT = """You are LifeCal's fun assistant. You help users make the most of their free time.
-Suggest activities, restaurants, events, and experiences based on what the user tells you.
-Be enthusiastic, friendly, and specific. Ask about their location, budget, and mood if needed."""
 
+When a user asks for activity or food recommendations, end your message with exactly this tag on a new line:
+SEARCH: <search query>
+
+For example if they want Mexican food: 
+SEARCH: Mexican restaurants
+
+Only include SEARCH when they're explicitly asking for a place recommendation.
+For general conversation, do NOT include the SEARCH tag."""
 class Message(BaseModel):
     role: str
     content: str

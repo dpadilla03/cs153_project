@@ -3,7 +3,7 @@ import axios from 'axios'
 import API_BASE from '../utils/api'
 
 // test
-function ChatBox({ mode, messages, setMessages }) {
+function ChatBox({ mode, messages, setMessages, preferences }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
@@ -12,7 +12,7 @@ function ChatBox({ mode, messages, setMessages }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = async () => {
+   const sendMessage = async () => {
     if (!input.trim() || loading) return
 
     const userMsg = { role: 'user', content: input }
@@ -23,10 +23,39 @@ function ChatBox({ mode, messages, setMessages }) {
     try {
       const res = await axios.post(`${API_BASE}/api/chat/`, {
         messages: [...messages, userMsg],
-        mode
+        mode,
+        preferences
       })
-      setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
-    } catch (err) {
+
+      const reply = res.data.reply
+
+      if (mode === 'fun' && reply.includes('SEARCH:')) {
+        const searchQuery = reply.split('SEARCH:')[1].trim()
+        const cleanReply = reply.split('SEARCH:')[0].trim()
+
+        setMessages(prev => [...prev, { role: 'assistant', content: cleanReply }])
+
+        if (preferences?.location) {
+          const placesRes = await axios.post(`${API_BASE}/api/places/search`, {
+            query: searchQuery,
+            location: preferences.location,
+            budget: preferences.budget,
+            limit: 3
+          })
+          if (placesRes.data.places.length > 0) {
+            const placesList = placesRes.data.places
+              .map(p => `📍 **${p.name}** (${p.category}) — ${p.address} ${p.distance}`)
+              .join('\n')
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Here are some options near you:\n${placesList}`
+            }])
+          }
+        }
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      }
+    }catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: '⚠️ Could not reach backend. Is it running?'
