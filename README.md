@@ -12,7 +12,7 @@ An AI-powered scheduling app with two modes: **Work Mode** parses a syllabus PDF
 
 Students and busy individuals constantly struggle with two related problems: keeping track of academic deadlines buried in dense syllabus PDFs, and figuring out how to actually use the free time they have. Existing tools solve these in isolation — calendar apps require manual entry, and recommendation apps know nothing about your schedule or stress level.
 
-LifeCal addresses both sides with a single AI-powered agent system. The scheduling agent reads your syllabus and builds your calendar automatically. The activity agent knows when you're free and finds real places nearby that match your preferences and budget. The two modes share context — the app knows how busy you are, which makes the fun recommendations smarter.
+LifeCal addresses both sides with a single AI-powered agent system. The scheduling agent reads your syllabus and builds your calendar automatically. The activity agent finds real places nearby that match your preferences and budget. The two modes are intentionally separate — Work Mode handles academic deadlines, Fun Mode handles leisure planning.
 
 ---
 
@@ -93,9 +93,10 @@ LifeCal/
 │   ├── main.py               # FastAPI app, CORS config, router registration
 │   ├── .env                  # ANTHROPIC_API_KEY, FOURSQUARE_API_KEY (gitignored)
 │   └── routes/
-│       ├── chat.py           # POST /api/chat/ — Claude agent, mode-aware prompts
+│       ├── chat.py           # POST /api/chat/ — Claude agent, mode-aware prompts + calendar tools
 │       ├── syllabus.py       # POST /api/syllabus/parse — PDF → Claude → calendar events
-│       └── places.py         # POST /api/places/search — Foursquare category search
+│       ├── places.py         # POST /api/places/search — Foursquare category search
+│       └── calendar.py       # POST /api/calendar/export — events → .ics file download
 ├── .env                      # VITE_API_URL=https://api.lifecal.cc (gitignored)
 └── .env.example              # Safe template, committed to git
 ```
@@ -106,7 +107,7 @@ LifeCal/
 
 ### Work Mode
 
-Upload a syllabus PDF. The backend extracts the text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. These are added to FullCalendar as blue (`#6c8aff`) events and the calendar auto-navigates to the first deadline.
+Upload one or more syllabus PDFs. Each syllabus becomes its own course tab in the sidebar. The backend extracts text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. Each course is assigned a unique color from a rotating palette, and the calendar auto-navigates to the first deadline of the most recently uploaded course. After loading, the user can chat to modify that course's events — Claude can add, remove, reschedule, and rename events, and only sees events for the currently selected course tab.
 
 ### Fun Mode
 
@@ -152,10 +153,18 @@ Claude is instructed to output one of these exact keywords in the SEARCH tag. If
 
 ### `POST /api/chat/`
 ```
-Body:  { messages: [{role, content}], mode: "work"|"fun", preferences: {location, budget, activity_type} }
-Response: { reply: string }
+Body:    { messages: [{role, content}], mode: "work"|"fun", preferences: {location, budget, activity_type}, events: [{id, title, date}] }
+Response: { reply: string, tool_calls: [{name, input}] }
 ```
-Claude is given a mode-aware system prompt. In Fun Mode, preferences are injected and Claude is instructed to end with a `SEARCH: <keyword>` tag when recommending places.
+Claude is given a mode-aware system prompt and the relevant events list. It has access to four calendar tools: `add_event`, `remove_event`, `reschedule_event`, `rename_event`. In Fun Mode, Claude is also instructed to append a `SEARCH: <keyword>` tag when recommending places. Both modes decline requests unrelated to scheduling.
+
+### `POST /api/calendar/export`
+```
+Body:    [{id, title, date, start, placeAddress, placeCategory, placeDistance, placeUrl,
+           courseName, assignmentType, estimatedHours, assignmentDescription}]
+Response: text/calendar file download (lifecal.ics)
+```
+Builds a valid RFC 5545 ICS file combining all course events and fun events into a single download.
 
 ### `POST /api/syllabus/parse`
 ```
@@ -177,12 +186,17 @@ Infers a Foursquare category ID from the query (falling back to activity_type), 
 
 ```js
 mode              // 'work' | 'fun'
-events            // FullCalendar events array
+courses           // array of { id, name, color, events[], messages[] } — one entry per uploaded syllabus
+activeCourseId    // id of the currently selected course tab (Work Mode)
+funEvents         // FullCalendar events array for Fun Mode
 calendarDate      // auto-navigate calendar on event add
-workMessages      // work chat history (separate from fun)
-funMessages       // fun chat history
+funMessages       // fun chat history (work chat history lives inside each course object)
 preferences       // { location, budget, activity_type }
 uploadStatus      // 'idle' | 'loading' | 'done' | 'error'
+
+// derived
+activeCourse      // courses.find(c => c.id === activeCourseId)
+allEvents         // [...courses.flatMap(c => c.events), ...funEvents]
 ```
 
 ---
@@ -242,7 +256,7 @@ As required by the CS 153 AI policy, here is a full account of where AI tools we
 
 **Claude (Anthropic) — primary AI used throughout**
 - `claude-sonnet-4-5` powers the Work Mode and Fun Mode chat agents at runtime
-- `claude-sonnet-4-5` is also called at runtime by the syllabus parser to extract structured deadline data from PDF text
+- `claude-haiku-4-5` is called at runtime by the syllabus parser to extract structured deadline data from PDF text
 - Claude (claude.ai) was used extensively during development for code generation, debugging, architecture decisions, and writing this README. Essentially every file in this repo was written with Claude assistance in a pair-programming style — I directed the decisions, Claude helped implement them.
 
 **Claude Code**
