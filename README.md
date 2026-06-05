@@ -2,6 +2,8 @@
 
 An AI-powered scheduling app with two modes: **Work Mode** parses a syllabus PDF and populates your calendar with deadlines; **Fun Mode** chats with you to find activities and places nearby.
 
+You can find the live version at:
+[https://cs153-project.pages.dev/](https://cs153-project.pages.dev/)
 ---
 
 ## Stack
