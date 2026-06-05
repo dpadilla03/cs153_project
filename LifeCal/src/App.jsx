@@ -51,6 +51,7 @@ function App() {
         }
         if (tc.input.time) {
           newEvent.start = `${tc.input.date}T${tc.input.time}`
+          newEvent.end = newEvent.start
         } else {
           newEvent.date = tc.input.date
         }
@@ -76,10 +77,12 @@ function App() {
           const updated = { ...e }
           if (tc.input.new_time) {
             updated.start = `${tc.input.new_date}T${tc.input.new_time}`
+            updated.end = updated.start
             delete updated.date
           } else {
             updated.date = tc.input.new_date
             delete updated.start
+            delete updated.end
           }
           return updated
         }
@@ -125,6 +128,7 @@ function App() {
     }
     if (time) {
       event.start = `${date}T${time}`
+      event.end = event.start
     } else {
       event.date = date
     }
