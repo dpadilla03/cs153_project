@@ -38,7 +38,7 @@
 }
 
 body {
-  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'DM Sans', 'Inter', sans-serif;
+  font-family: 'Nunito', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   height: 100vh;
@@ -94,9 +94,10 @@ body {
 /* Logo */
 .logo {
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text);
+  font-family: 'Nunito', -apple-system, sans-serif;
 }
 
 /* Mode toggle */
@@ -626,7 +627,7 @@ body {
 
 /* ─── FullCalendar overrides ──────────────────── */
 .fc {
-  font-family: -apple-system, 'SF Pro Text', 'DM Sans', 'Inter', sans-serif;
+  font-family: 'Nunito', -apple-system, sans-serif;
   font-size: 0.82rem;
   height: 100%;
 }
