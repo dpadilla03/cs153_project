@@ -500,6 +500,56 @@ body {
   opacity: 0.75;
 }
 
+.courses-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.course-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: left;
+  transition: all 0.15s;
+  font-family: inherit;
+  width: 100%;
+  overflow: hidden;
+}
+
+.course-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.course-tab.active {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.course-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.course-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .export-btn {
   margin-top: auto;
   padding: 8px 12px;

@@ -14,8 +14,10 @@ WORK_PROMPT_BASE = """You are LifeCal's work assistant. You help students manage
 You help with study planning, deadline tracking, and staying on top of coursework.
 Be concise, practical, and encouraging.
 
-You have tools to modify the user's calendar: add_event, remove_event, reschedule_event.
-Use them when the user asks to add, remove, or move events. Always include a short plain-text explanation alongside any tool call so the user knows what you did.
+Only respond to requests related to scheduling, calendar management, deadlines, and time planning. If the user asks about anything unrelated (e.g. general knowledge, coding help, writing essays), politely decline and redirect them to calendar topics.
+
+You have tools to modify the user's calendar: add_event, remove_event, reschedule_event, rename_event.
+Use them when the user asks to add, remove, move, or rename events. Always include a short plain-text explanation alongside any tool call so the user knows what you did.
 
 {events_context}"""
 
@@ -57,9 +59,24 @@ CALENDAR_TOOLS = [
             "required": ["id", "new_date"],
         },
     },
+    {
+        "name": "rename_event",
+        "description": "Rename a calendar event.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "id":        {"type": "string", "description": "The event ID to rename"},
+                "new_title": {"type": "string", "description": "The new title for the event"},
+            },
+            "required": ["id", "new_title"],
+        },
+    },
 ]
 
 FUN_PROMPT_BASE = """You are LifeCal's fun assistant. You help users make the most of their free time.
+
+Only respond to requests related to scheduling, finding places, calendar management, and time planning. If the user asks about anything unrelated, politely decline and redirect them to calendar and activity topics.
+
 
 {preferences_context}
 
@@ -86,8 +103,8 @@ Examples:
 Only include SEARCH when they're explicitly asking for a place recommendation.
 For general conversation, do NOT include the SEARCH tag.
 
-You also have tools to manage the user's fun calendar events: add_event, remove_event, reschedule_event.
-Use them when the user asks to add, remove, or move existing fun events. Always include a short plain-text explanation alongside any tool call."""
+You also have tools to manage the user's fun calendar events: add_event, remove_event, reschedule_event, rename_event.
+Use them when the user asks to add, remove, move, or rename existing fun events. Always include a short plain-text explanation alongside any tool call."""
 
 class Message(BaseModel):
     role: str
