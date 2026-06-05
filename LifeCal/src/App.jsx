@@ -11,6 +11,11 @@ console.log('API_BASE is:', import.meta.env.VITE_API_URL)
 
 function App() {
   const [mode, setMode] = useState('work')
+  const [darkMode, setDarkMode] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
   const [backendOnline, setBackendOnline] = useState(false)
   const [events, setEvents] = useState([])
   const [workMessages, setWorkMessages] = useState([{ role: 'assistant', content: "Hi! Upload a syllabus and I'll help you plan your schedule." }])
@@ -96,12 +101,21 @@ function App() {
     <div className="app">
       <aside className="sidebar">
 
-        {/* Backend status indicator */}
-        <div className="backend-status">
-          <span className={`status-dot ${backendOnline ? 'online' : 'offline'}`} />
-          <span className="status-text">
-            {backendOnline ? 'BACKEND ONLINE' : 'BACKEND OFFLINE'}
-          </span>
+        {/* Sidebar header row: status + theme toggle */}
+        <div className="sidebar-header">
+          <div className="backend-status">
+            <span className={`status-dot ${backendOnline ? 'online' : 'offline'}`} />
+            <span className="status-text">
+              {backendOnline ? 'BACKEND ONLINE' : 'BACKEND OFFLINE'}
+            </span>
+          </div>
+          <button
+            className="theme-toggle"
+            onClick={() => setDarkMode(d => !d)}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? '☀' : '☽'}
+          </button>
         </div>
 
         <h1 className="logo">LifeCal</h1>
