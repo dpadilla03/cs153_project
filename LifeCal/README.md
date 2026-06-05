@@ -48,7 +48,11 @@ LifeCal/
 
 ### Work Mode
 
-Upload a syllabus PDF. The backend extracts the text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. These populate FullCalendar as blue (`#6c8aff`) events and the calendar auto-navigates to the first deadline. If the syllabus omits the year, the current year is used as the default.
+Upload one or more syllabus PDFs. Each uploaded syllabus becomes its own **course tab** in the sidebar. Clicking a tab switches the active course — the chat context and calendar event scope both update to that course only.
+
+Each course is automatically assigned a unique color from a rotating palette. All events belonging to that course appear in that color on the calendar.
+
+The backend extracts text with pdfplumber, sends it to Claude Haiku with a structured prompt, and returns a JSON list of assignments with titles, due dates, types, and estimated hours. The calendar auto-navigates to the first deadline of the most recently uploaded course. If the syllabus omits the year, the current year is used as the default.
 
 Each syllabus event stores the full assignment metadata on the event object:
 
@@ -57,11 +61,12 @@ Each syllabus event stores the full assignment metadata on the event object:
 | `title` | assignment title | Calendar label, ICS SUMMARY |
 | `date` | due date (YYYY-MM-DD) | Calendar position |
 | `courseName` | parsed course name | ICS DESCRIPTION |
+| `courseId` | internal course ID | Event scoping per tab |
 | `assignmentType` | assignment / exam / reading / project | ICS CATEGORIES |
 | `estimatedHours` | Claude estimate | ICS DESCRIPTION |
 | `assignmentDescription` | brief description from syllabus | ICS DESCRIPTION |
 
-After the syllabus is loaded, the user can continue chatting to modify the calendar — Claude has access to calendar tools (see Work Mode Chat below).
+After a syllabus is loaded, the user can continue chatting to modify that course's calendar — Claude has access to calendar tools (see Calendar Editing below) and only sees events for the currently selected course tab.
 
 ### Fun Mode
 
@@ -79,20 +84,23 @@ Clicking **Add** creates a FullCalendar event in coral (`#ff7a6c`) and navigates
 
 ## Calendar Editing via Chat
 
-Both modes support natural language calendar editing. Claude is given the relevant events list (work events in Work Mode, fun events in Fun Mode) in its system prompt and has access to three tools:
+Both modes support natural language calendar editing. Claude is given the relevant events list in its system prompt and has access to four tools:
 
 | Tool | Parameters | What it does |
 |---|---|---|
-| `add_event` | `title`, `date`, `time?` | Adds an event (blue in Work, coral in Fun) |
+| `add_event` | `title`, `date`, `time?` | Adds an event (course color in Work, coral in Fun) |
 | `remove_event` | `id` | Removes an event by its ID |
 | `reschedule_event` | `id`, `new_date`, `new_time?` | Moves an event to a new date and/or time |
+| `rename_event` | `id`, `new_title` | Renames an event |
 
-`time` and `new_time` are optional (HH:MM 24-hour). When provided, FullCalendar renders the event as timed; when omitted, it's all-day.
+`time` and `new_time` are optional (HH:MM 24-hour). When provided, FullCalendar renders the event as timed at zero duration to prevent the default 1-hour block from crossing midnight; when omitted, it's all-day.
 
-Each mode only sees its own events — Work Mode sees `syllabus-*` and `work-*` events; Fun Mode sees `fun-*` events — so Claude can't accidentally modify events from the other mode.
+**Work Mode scoping:** Claude only sees events for the currently selected course tab, so edits are always targeted to the active course. Fun Mode sees only `fun-*` events. Claude cannot accidentally modify events from another course or mode.
+
+**Calendar-only guardrail:** Both modes are instructed to decline requests unrelated to scheduling and calendar management.
 
 Example prompts:
-- Work: *"Move my midterm to the 20th"*, *"Add a study session Friday at 2pm"*, *"Remove the week 3 reading"*
+- Work: *"Move my midterm to the 20th"*, *"Add a study session Friday at 2pm"*, *"Rename HW3 to Problem Set 3"*, *"Remove the week 3 reading"*
 - Fun: *"Move dinner to Saturday"*, *"Reschedule Taverna to 9:30pm"*, *"Remove the escape room"*
 
 Claude always includes a plain-text explanation alongside any tool call so the user knows what changed.
@@ -129,7 +137,7 @@ Claude is instructed to output one of these exact keywords in the SEARCH tag. If
 
 ## ICS Export
 
-The **↓ Export .ics** button appears in the sidebar whenever there are calendar events. It POSTs the full events array to `/api/calendar/export` and triggers a file download.
+The **↓ Export .ics** button appears in the sidebar whenever there are calendar events. It POSTs the full events array (all courses + fun events combined) to `/api/calendar/export` and triggers a single file download, regardless of how many course tabs are loaded.
 
 Both event types export with rich metadata:
 
@@ -183,12 +191,18 @@ Builds a valid RFC 5545 ICS file with metadata for both work and fun mode events
 
 ```js
 mode              // 'work' | 'fun'
-events            // FullCalendar events array (includes metadata fields)
+courses           // array of { id, name, color, events[], messages[] } — one entry per uploaded syllabus
+activeCourseId    // id of the currently selected course tab (Work Mode)
+funEvents         // FullCalendar events array for Fun Mode
 calendarDate      // auto-navigate calendar on event add
-workMessages      // work chat history (separate from fun)
-funMessages       // fun chat history
+funMessages       // fun chat history (work chat history lives inside each course object)
 preferences       // { location, budget, activity_type }
 uploadStatus      // 'idle' | 'loading' | 'done' | 'error'
+
+// derived
+activeCourse      // courses.find(c => c.id === activeCourseId)
+allEvents         // [...courses.flatMap(c => c.events), ...funEvents] — passed to CalendarView and ICS export
+workMessages      // activeCourse?.messages (scoped per course tab)
 ```
 
 ---
@@ -202,11 +216,28 @@ uploadStatus      // 'idle' | 'loading' | 'done' | 'error'
 --border: #2e2e38
 --text: #e8e8f0
 --text-muted: #7a7a8c
---accent-work: #6c8aff        /* blue — Work mode */
---accent-fun: #ff7a6c         /* coral — Fun mode */
+--accent-work: #6c8aff        /* blue — Work mode UI chrome */
+--accent-fun: #ff7a6c         /* coral — Fun mode events */
 --accent-work-dim: rgba(108,138,255,0.12)
 --accent-fun-dim: rgba(255,122,108,0.12)
 ```
+
+## Course Color Palette
+
+Work Mode events are colored per course using a rotating 8-color palette:
+
+| Slot | Color | Hex |
+|---|---|---|
+| 1 | Blue | `#6c8aff` |
+| 2 | Amber | `#f59e0b` |
+| 3 | Emerald | `#10b981` |
+| 4 | Rose | `#f43f5e` |
+| 5 | Violet | `#8b5cf6` |
+| 6 | Cyan | `#06b6d4` |
+| 7 | Pink | `#ec4899` |
+| 8 | Lime | `#84cc16` |
+
+Colors cycle if more than 8 courses are uploaded. Each course's color is stored on the course object and applied to every event in that course (`backgroundColor` + `borderColor`).
 
 ---
 
