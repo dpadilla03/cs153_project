@@ -1,9 +1,66 @@
 # LifeCal - CS153 Final Project
 
+**Track:** Automation / Agent Systems
+
 An AI-powered scheduling app with two modes: **Work Mode** parses a syllabus PDF and populates your calendar with deadlines; **Fun Mode** chats with you to find activities and places nearby.
 
-You can find the live version at:
-[https://cs153-project.pages.dev/](https://cs153-project.pages.dev/)
+**Live version:** [https://cs153-project.pages.dev/](https://cs153-project.pages.dev/)
+
+---
+
+## Problem & Motivation
+
+Students and busy individuals constantly struggle with two related problems: keeping track of academic deadlines buried in dense syllabus PDFs, and figuring out how to actually use the free time they have. Existing tools solve these in isolation — calendar apps require manual entry, and recommendation apps know nothing about your schedule or stress level.
+
+LifeCal addresses both sides with a single AI-powered agent system. The scheduling agent reads your syllabus and builds your calendar automatically. The activity agent knows when you're free and finds real places nearby that match your preferences and budget. The two modes share context — the app knows how busy you are, which makes the fun recommendations smarter.
+
+---
+
+## How It Works (Architecture)
+
+LifeCal is an agent system with two specialized Claude-powered agents coordinating with external tools:
+
+**Work Mode Agent**
+1. User uploads a syllabus PDF
+2. Backend extracts text via pdfplumber
+3. Claude parses unstructured text into structured JSON (assignments, due dates, types, estimated hours)
+4. Events populate FullCalendar and the view auto-navigates to the first deadline
+
+**Fun Mode Agent**
+1. User chats about what they want to do
+2. Claude responds conversationally, then appends a controlled `SEARCH: <keyword>` tag when it decides a place search is warranted — this is the agentic tool-use decision
+3. Frontend strips the tag, displays the clean response, and calls the Foursquare Places API
+4. Results are filtered by the user's location, budget, and activity type preferences
+5. Place cards are returned with an "Add to Calendar" option
+
+The key design decision: Claude controls *when* to trigger the external tool call. It only appends `SEARCH:` when the user is actually asking for a recommendation, not during general conversation.
+
+---
+
+## Evaluation & Limitations
+
+**What was tested:**
+- Syllabus parser tested on 3 different course syllabi (CS107, CS153, and one external). Successfully extracted all deadlines with correct dates on well-formatted PDFs.
+- Fun Mode tested with varied queries (food, outdoors, coffee, bars) across different budget levels. Foursquare results are accurate for the Palo Alto area.
+- The `SEARCH:` tag approach was validated — Claude correctly withholds the tag during conversational exchanges and only triggers it on explicit recommendation requests.
+
+**Known limitations:**
+- Calendar state is not persisted — refreshing the page clears all events. A database (Cloudflare D1) would fix this.
+- Syllabus parser struggles with scanned PDFs or heavily image-based layouts where pdfplumber cannot extract clean text.
+- Fun Mode place results display with raw markdown syntax visible — a `react-markdown` integration would fix this.
+- No Google Calendar or Apple Calendar sync — users can export events as `.ics` for manual import.
+- Foursquare free tier limits category-based search, so very niche queries may not return relevant results.
+
+---
+
+## What I'd Add Next
+
+- **Persistent storage** via Cloudflare D1 — save calendar events and chat history across sessions
+- **Google/Apple Calendar sync** — push events directly via OAuth instead of `.ics` export
+- **Proactive nudges** — agent detects upcoming deadlines and surfaces them in chat unprompted
+- **Shared calendars** — two users' agents negotiate mutual free time, each respecting their own preferences
+- **Richer preference learning** — agent tracks which suggestions the user accepted or ignored and adjusts future recommendations
+
 ---
 
 ## Stack
@@ -161,31 +218,14 @@ npm run dev                   # runs on localhost:5173
 ```bash
 cd LifeCal/backend
 python -m venv venv && source venv/bin/activate
-
-# Generate requirements.txt if it doesn't exist yet
-pip freeze > requirements.txt
-
-pip install -r requirements.txt
+pip install fastapi uvicorn pdfplumber anthropic httpx python-dotenv python-multipart
 cp .env.example .env          # set ANTHROPIC_API_KEY and FOURSQUARE_API_KEY
 uvicorn main:app --reload     # runs on localhost:8000
 ```
 
-> **Note:** If you add new Python dependencies, regenerate `requirements.txt` before pushing:
-> ```bash
-> cd LifeCal/backend
-> source venv/bin/activate
-> pip freeze > requirements.txt
-> ```
-
 ---
 
 ## Deployment
-
-### Live URLs
-- **Frontend:** https://cs153-project.pages.dev
-- **Backend API:** https://api.lifecal.cc
-
-### Deploy commands
 
 | Step | Command |
 |---|---|
@@ -194,10 +234,18 @@ uvicorn main:app --reload     # runs on localhost:8000
 | Frontend env vars | Set in Cloudflare Pages dashboard |
 | Backend env vars | Edit `backend/.env` on the droplet |
 
-### SSH into the droplet
-```bash
-ssh root@167.99.172.146
-cd ~/cs153_project
-git pull
-pm2 restart lifecal-backend
-```
+---
+
+## AI Usage Disclosure
+
+As required by the CS 153 AI policy, here is a full account of where AI tools were used in this project:
+
+**Claude (Anthropic) — primary AI used throughout**
+- `claude-sonnet-4-5` powers the Work Mode and Fun Mode chat agents at runtime
+- `claude-sonnet-4-5` is also called at runtime by the syllabus parser to extract structured deadline data from PDF text
+- Claude (claude.ai) was used extensively during development for code generation, debugging, architecture decisions, and writing this README. Essentially every file in this repo was written with Claude assistance in a pair-programming style — I directed the decisions, Claude helped implement them.
+
+**Claude Code**
+- Used in later stages of development for implementing the Foursquare Places integration, place card rendering, "Add to Calendar" feature, and `.ics` export functionality.
+
+**Note on code originality:** All code was written from scratch for this project. No existing repos were forked or borrowed from. The commit history reflects the iterative development process over the course of the project.
